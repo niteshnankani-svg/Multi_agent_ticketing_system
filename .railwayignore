@@ -1,0 +1,8 @@
+.env
+models/router_checkpoints/
+models/router/
+data/raw/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
