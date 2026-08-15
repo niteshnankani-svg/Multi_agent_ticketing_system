@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Python bytecode/cache
+__pycache__/
+*.pyc
+
+# Trained models (large, not versioned)
+models/
+
+# ChromaDB vector store
+stores/
+
+# SQLite checkpoint files
+runtime/
+
+# OS / editor cruft
+.DS_Store
+.ipynb_checkpoints/
+.pytest_cache/
+*.egg-info/
