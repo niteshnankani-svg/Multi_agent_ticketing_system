@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://54.91.16.86:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://d26edylmd2q5pk.cloudfront.net'
 
 const CATEGORY_LABELS = {
   finance: 'Finance',
