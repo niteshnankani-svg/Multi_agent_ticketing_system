@@ -19,3 +19,6 @@ runtime/
 .ipynb_checkpoints/
 .pytest_cache/
 *.egg-info/
+
+# Vercel project link (local, machine-specific)
+.vercel/
