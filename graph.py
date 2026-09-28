@@ -1,10 +1,9 @@
-import torch
 import sqlite3
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
 from langgraph.types import interrupt
 from langgraph.checkpoint.sqlite import SqliteSaver
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from typesafe_sdk import Choice, TypeSafeClient
 
 from ingest import ingest_ticket
 from generate_answer import answer_finance_ticket
@@ -24,12 +23,15 @@ class TicketState(TypedDict):
     needs_human: bool
     escalation_reason: Optional[str]
 
-# ---- 2. load the trained classifier once ----
-tokenizer = AutoTokenizer.from_pretrained("models/router")
-model = AutoModelForSequenceClassification.from_pretrained("models/router")
-device = "mps" if torch.backends.mps.is_available() else "cpu"
-model.to(device)
-model.eval()
+# ---- 2. TypeSafe client for ticket classification (Jev) ----
+typesafe_client = TypeSafeClient()
+
+CATEGORY_CRITERIA = {
+    "finance": "Billing, payments, charges, refunds, invoices, subscriptions, sales, returns and exchanges",
+    "backend": "Product or technical issues: outages, bugs, crashes, login or account recovery problems, integrations, security or performance issues",
+    "internal": "Internal employee requests: shared drive access, software license availability, VPN status, badge access",
+    "general": "General questions that don't fit finance, backend, or internal",
+}
 
 # ---- 3. NODE: clean the ticket ----
 def ingest_node(state: TicketState) -> TicketState:
@@ -53,14 +55,18 @@ def cache_hit_or_miss(state: TicketState) -> str:
 
 # ---- 5. NODE: classify ----
 def classify_node(state: TicketState) -> TicketState:
-    inputs = tokenizer(state["clean_text"], truncation=True, max_length=128,
-                        padding=True, return_tensors="pt").to(device)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    probs = torch.softmax(outputs.logits, dim=1)[0]
-    top_id = probs.argmax().item()
-    state["category"] = model.config.id2label[top_id]
-    state["category_confidence"] = probs[top_id].item()
+    response = typesafe_client.system_one(
+        state=state["clean_text"],
+        questions={
+            "category": Choice(
+                instructions="Which team should handle this support ticket?",
+                criteria=CATEGORY_CRITERIA,
+            ),
+        },
+    )
+    answer = response.choices["category"]
+    state["category"] = answer.choice
+    state["category_confidence"] = answer.confidence
     return state
 
 # ---- 6. confidence gate - decides answer vs escalate ----

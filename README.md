@@ -1,6 +1,6 @@
 # Multi-Agent Ticketing System
 
-A LangGraph-based support ticket router. An incoming ticket is cleaned, checked against a semantic cache, classified into one of four categories by a fine-tuned classifier (`models/router`), and handed off to a category-specific agent (finance, backend, internal, or general) to draft an answer, with a human-escalation path for low-confidence cases.
+A LangGraph-based support ticket router. An incoming ticket is cleaned, checked against a semantic cache, classified into one of four categories by TypeSafe's Jev model (via a `Choice` question), and handed off to a category-specific agent (finance, backend, internal, or general) to draft an answer, with a human-escalation path for low-confidence cases. An earlier fine-tuned local classifier (`models/router`, see `train_router.py`) is no longer used at runtime but is kept as a training artifact/reference.
 
 ## Repository layout
 
