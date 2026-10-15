@@ -23,6 +23,12 @@ class TicketState(TypedDict):
     needs_human: bool
     escalation_reason: Optional[str]
 
+# When True, every ticket is classified (so the reviewer sees Jev's suggested
+# category and confidence) and then paused for a human - no specialist agent
+# answers and the semantic cache is bypassed. Set to False to restore
+# confidence-gated auto-answering.
+ROUTE_ALL_TO_HUMAN = True
+
 # ---- 2. TypeSafe client for ticket classification (Jev) ----
 typesafe_client = TypeSafeClient()
 
@@ -41,6 +47,8 @@ def ingest_node(state: TicketState) -> TicketState:
 
 # ---- 4. NODE: check cache before doing any real work ----
 def cache_check_node(state: TicketState) -> TicketState:
+    if ROUTE_ALL_TO_HUMAN:
+        return state
     cached_answer = check_cache(state["clean_text"])
     if cached_answer:
         state["answer"] = cached_answer
@@ -71,7 +79,7 @@ def classify_node(state: TicketState) -> TicketState:
 
 # ---- 6. confidence gate - decides answer vs escalate ----
 def confidence_gate(state: TicketState) -> str:
-    if state["category_confidence"] < 0.70:
+    if ROUTE_ALL_TO_HUMAN or state["category_confidence"] < 0.70:
         return "escalate"
     return state["category"]
 
@@ -94,15 +102,19 @@ def general_node(state: TicketState) -> TicketState:
 
 # ---- 8. NODE: escalation (pauses via interrupt) ----
 def escalation_node(state: TicketState) -> TicketState:
+    if ROUTE_ALL_TO_HUMAN:
+        reason = "human_review_required"
+    else:
+        reason = "low_confidence"
     human_response = interrupt({
-        "reason": "low_confidence",
+        "reason": reason,
         "ticket_text": state["clean_text"],
         "predicted_category": state["category"],
         "confidence": state["category_confidence"],
     })
     state["answer"] = human_response["answer"]
     state["needs_human"] = True
-    state["escalation_reason"] = "low_confidence"
+    state["escalation_reason"] = reason
     return state
 
 # ---- 9. NODE: save a fresh answer into the cache ----
