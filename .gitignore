@@ -8,8 +8,9 @@ __pycache__/
 # Trained models (large, not versioned)
 models/
 
-# ChromaDB vector store
-stores/
+# ChromaDB vector store - versioned on purpose: the Railway service builds
+# from this repo, so the knowledge-base collections have to be in it.
+# stores/
 
 # SQLite checkpoint files
 runtime/

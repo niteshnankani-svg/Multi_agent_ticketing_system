@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
@@ -27,7 +28,7 @@ class TicketState(TypedDict):
 # category and confidence) and then paused for a human - no specialist agent
 # answers and the semantic cache is bypassed. Set to False to restore
 # confidence-gated auto-answering.
-ROUTE_ALL_TO_HUMAN = True
+ROUTE_ALL_TO_HUMAN = False
 
 # ---- 2. TypeSafe client for ticket classification (Jev) ----
 typesafe_client = TypeSafeClient()
@@ -161,6 +162,9 @@ graph.add_edge("cache_store", END)
 graph.add_edge("escalation", END)
 
 # ---- 11. checkpointer - survives process restarts ----
+# runtime/ is gitignored, so a container built from the repo starts without
+# it and sqlite3.connect would fail with "unable to open database file".
+os.makedirs("runtime", exist_ok=True)
 conn = sqlite3.connect("runtime/checkpoints.db", check_same_thread=False)
 checkpointer = SqliteSaver(conn)
 app = graph.compile(checkpointer=checkpointer)
